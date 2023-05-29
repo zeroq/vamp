@@ -1,0 +1,152 @@
+{% extends "base2.html" %}
+{% load static %}
+{% load nvd3_tags %}
+
+{% block content %}
+{% spaceless %}
+<div class="page-header">
+    <div class="media">
+        <div class="media-left">
+        </div>
+        <div class="media-body">
+            <h2 class="media-heading">VAMP Base</h2> nothing here yet ...
+        </div>
+    </div>
+</div>
+{% if messages %}{% for message in messages %}<div {% if message.tags %} class="alert alert-{{ message.tags }}"{% endif %}>{{ message }}</div>{% endfor %}{% endif %}
+
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <h3 class="panel-title">// Vulnerability Overview</h3>
+  </div>
+  <div class="panel-body">
+    <table class="table">
+        <thead>
+            <th style="text-align:center"><span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span> Unique High Risk</th>
+            <th style="text-align:center"><span class="glyphicon glyphicon-fire" aria-hidden="true"></span> Unique CVE/CWEs</th>
+            <th style="text-align:center"><span class="glyphicon glyphicon-flash" aria-hidden="true"></span> Unique Exploitable</th>
+            <th style="text-align:center"><span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span> Total High Risk</th>
+            <th style="text-align:center"><span class="glyphicon glyphicon-fire" aria-hidden="true"></span> Total CVE/CWEs</th>
+            <th style="text-align:center"><span class="glyphicon glyphicon-flash" aria-hidden="true"></span> Total Exploitable</th>
+        </thead>
+        <tr>
+            <td align="center"><h2>{{ uhighs }}</h2></td>
+            <td align="center"><h2>{{ ucves }}</h2></td>
+            <td align="center"><h2>{{ uexploits }}</h2></td>
+            <td align="center"><h2>{{ highs }}</h2></td>
+            <td align="center"><h2>{{ cves }}</h2></td>
+            <td align="center"><h2>{{ exploits }}</h2></td>
+        </tr>
+    </table>
+  </div>
+</div>
+
+<!--
+<div style="width: 49%; float: left; vertical-align: top;">
+<div style="width: 49%; float: left; vertical-align: top;">
+-->
+
+<div class="panel panel-default" style="width: 49%; float: left; vertical-align: top; margin-right: 2%;">
+    <div class="panel-heading">
+        <h3 class="panel-title">// Top Vulnerable Hosts</h3>
+    </div>
+    <div class="panel-body">
+        <table id="table_list_hosts" class="table table-condensed table-striped table-bordered" style="font-size: 0.9em;">
+        <thead>
+            <th>Name</th>
+            <th>Vulnerabilities</th>
+            <th>Last Scan</th>
+        </thead>
+        </table>
+    </div>
+</div>
+<div class="panel panel-default" style="width: 49%; float: left; vertical-align: top;">
+    <div class="panel-heading">
+        <h3 class="panel-title">// Most Critical Vulnerabilities</h3>
+    </div>
+    <div class="panel-body">
+        <table id="table_list_vulnerabilities" class="table table-condensed table-striped table-bordered" style="font-size: 0.9em;">
+        <thead>
+            <th>Name</th>
+            <th>Severity</th>
+            <th>Exploitable</th>
+            <th># Assets</th>
+        </thead>
+        </table>
+    </div>
+</div>
+<div class="panel panel-default" style="width: 49%; float: left; vertical-align: top; margin-right: 2%;">
+    <div class="panel-heading">
+        <h3 class="panel-title">// Findings by Source</h3>
+    </div>
+    <div class="panel-body">
+        {% include_container chartcontainer1 250 700 %}
+    </div>
+</div>
+{% endspaceless%}
+{% endblock%}
+
+{% block javascript %}
+<script type="text/javascript" charset="utf8" src="{% static 'js/d3.min.js' %}"></script>
+<script type="text/javascript" charset="utf8" src="{% static 'js/nv.d3.min.js' %}"></script>
+{% load_chart charttype1 chartdata1 chartcontainer1 %}
+<script type="text/javascript" language="javascript" class="init">
+$(document).ready( function () {
+    var pTable = $('#table_list_hosts').DataTable({
+        processing: true, serverSide: true, pageLength: 25, select: true, ordering: false, paging: false, info: false, filter: false,
+        oLanguage: { sProcessing: "<img src='{% static 'img/loading.gif' %}'>", },
+        ajax: {
+            processing: true,
+            url: "/api/v1/hosts/top/vulnerable/",
+            dataSrc: "results",
+            type: "GET",
+            dataType: "json"
+        },
+        "rowCallback": function( row, data, index ) {},
+        buttons: [
+        ],
+        columns: [
+            {'data': 'name', 'sName': 'Name', 'aTargets': [ 1 ],
+                "mRender": function (data, type, full) {
+                    var view_url = "{% url 'hosts:view_host' hostid=0 %}".replace(0, full.id);;
+                    return '<div rel="tooltip" data-placement="top" data-original-title="'+full.name+'"><a href="'+view_url+'">'+data+'</a></div>';
+                },
+                "fnCreatedCell": function (nTd, sData, oData, iRow, iCol) {
+                    $("div", nTd).tooltip();
+                },
+            },
+            {'data': 'vulns', 'sName': 'Vulnerabilities', 'aTargets': [ 2 ]},
+            {'data': 'last_scan', 'sName': 'Last Scan', 'aTargets': [ 5 ]},
+        ]
+    });
+    var pTable = $('#table_list_vulnerabilities').DataTable({
+        processing: true, serverSide: true, pageLength: 25, select: true, ordering: false, paging: false, info: false, filter: false,
+        oLanguage: { sProcessing: "<img src='{% static 'img/loading.gif' %}'>", },
+        ajax: {
+            processing: true,
+            url: "/api/v1/findings/top/open/",
+            dataSrc: "results",
+            type: "GET",
+            dataType: "json"
+        },
+        "rowCallback": function( row, data, index ) {},
+        buttons: [
+        ],
+        columns: [
+            {'data': 'short', 'sName': 'Name', 'aTargets': [ 1 ],
+                "mRender": function (data, type, full) {
+                    var view_url = "{% url 'findings:view_finding' findingid=0 %}".replace(0, full.id);
+                    return '<div rel="tooltip" data-placement="top" data-original-title="'+full.short+'"><a href="'+view_url+'">'+data+'</a></div>';
+                },
+                "fnCreatedCell": function (nTd, sData, oData, iRow, iCol) {
+                    $("div", nTd).tooltip();
+                },
+            },
+            {'data': 'severity', 'sName': 'Severity', 'aTargets': [ 2 ]},
+            {'data': 'exploited_in_the_wild', 'sName': 'Exploitable', 'aTargets': [ 3 ]},
+            {'data': 'assets', 'sName': '# Assets', 'aTargets': [ 4 ]},
+        ]
+    });
+});
+</script>
+{% endblock%}

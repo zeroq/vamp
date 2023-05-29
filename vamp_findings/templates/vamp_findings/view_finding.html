@@ -1,0 +1,324 @@
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block header %}
+<style>
+.dataTables_info  {
+    font-size: 0.8em;
+}
+
+.dataTables_paginate {
+    font-size: 0.6em;
+}
+</style>
+{% endblock %}
+
+{% block javascript %}
+<script type="text/javascript">
+    $(document).ready( function () {
+        // DISPLAY AFFECTED HOSTS
+        var HostsTable = $('#table_list_hosts').DataTable({
+            processing: true, serverSide: true, pageLength: 30, ordering: false, paging: true, info: false, filter: false, lengthChange: false,
+            oLanguage: { sProcessing: "<img src='{% static 'img/loading.gif' %}'>", },
+            order: [[ 0, "desc" ]],
+            autoWidth: false,
+            ajax: {
+                processing: true,
+                url: "/api/v1/findings/{{ finding.id }}/hosts/open/",
+                dataSrc: "results",
+                type: "GET",
+                dataType: "json"
+            },
+            "rowCallback": function( row, data, index ) {},
+            columns: [
+                {'data': 'host_name', 'sName': 'Hostname', 'aTargets': [ 1 ],
+                    "mRender": function (data, type, full) {
+                        var view_url = "{% url 'hosts:view_host' hostid=0 %}".replace(0, full.host_id);
+                        return '<div rel="tooltip" data-placement="top" data-original-title="'+full.host_name+'"><a href="'+view_url+'">'+full.host_name+'</a></div>';
+                    },
+                },
+                {'data': 'status', 'sName': 'Status', 'aTargets': [ 1 ],
+                },
+            ]
+        });
+        // DISPLAY REMEDIATED HOSTS
+        var HostsTable = $('#table_list_re_hosts').DataTable({
+            processing: true, serverSide: true, pageLength: 30, ordering: false, paging: true, info: false, filter: false, lengthChange: false,
+            oLanguage: { sProcessing: "<img src='{% static 'img/loading.gif' %}'>", },
+            order: [[ 0, "desc" ]],
+            autoWidth: false,
+            ajax: {
+                processing: true,
+                url: "/api/v1/findings/{{ finding.id }}/hosts/remediated/",
+                dataSrc: "results",
+                type: "GET",
+                dataType: "json"
+            },
+            "rowCallback": function( row, data, index ) {},
+            columns: [
+                {'data': 'host_name', 'sName': 'Hostname', 'aTargets': [ 1 ],
+                    "mRender": function (data, type, full) {
+                        var view_url = "{% url 'hosts:view_host' hostid=0 %}".replace(0, full.host_id);
+                        return '<div rel="tooltip" data-placement="top" data-original-title="'+full.host_name+'"><a href="'+view_url+'">'+full.host_name+'</a></div>';
+                    },
+                },
+                {'data': 'status', 'sName': 'Status', 'aTargets': [ 1 ],
+                },
+            ]
+        });
+        // DISPLAY COMMENTS
+        var CommentsTable = $('#table_list_comments').DataTable({
+            processing: true, serverSide: true, pageLength: 30, ordering: false, paging: true, info: false, filter: false, lengthChange: false,
+            oLanguage: { sProcessing: "<img src='{% static 'img/loading.gif' %}'>", },
+            order: [[ 0, "desc" ]],
+            autoWidth: false,
+            ajax: {
+                processing: true,
+                url: "/api/v1/findings/{{ finding.id }}/comments/",
+                dataSrc: "results",
+                type: "GET",
+                dataType: "json"
+            },
+            "rowCallback": function( row, data, index ) {},
+            columns: [
+                {'data': 'creation_time', 'sName': 'Date', 'aTargets': [ 1 ],
+                },
+                {'data': 'author', 'sName': 'Author', 'aTargets': [ 2 ],
+                },
+                {'data': 'ctext', 'sName': 'Comment', 'aTargets': [ 3 ],
+                },
+            ]
+        });
+    });
+</script>
+{% endblock%}
+
+{% block sidebar %}
+{% spaceless %}
+<div class="page-header">
+    <div class="media">
+        <div class="media-left">
+        </div>
+        <div class="media-body">
+            <h4 class="media-heading">Information</h4>
+        </div>
+    </div>
+</div>
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">
+            // Tags
+            <a href="#" data-toggle="modal" data-target="#AddTagModal">
+                <span data-toggle="tooltip" data-placement="left" data-original-title="add tag" class="glyphicon glyphicon-plus pull-right" aria-hidden="true" style="padding-left:8px"></span>
+                        </a>
+            <a href="#">
+                <span data-toggle="tooltip" data-placement="left" data-original-title="refresh tags" class="glyphicon glyphicon-refresh pull-right" aria-hidden="true" style="padding-left:8px"></span>
+            </a>
+        </h3>
+    </div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-sm-6">
+                <div id="tag_list"></div>
+            </div>
+            <div class="col-sm-6">
+                <div id="tag_list_manual"></div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">
+            // Vulnerable Hosts
+        </h3>
+    </div>
+    <div class="panel-body">
+        <table id="table_list_hosts" class="table table-condensed table-striped table-bordered" style="font-size: 0.9em;">
+            <thead>
+                <th>Hostname</th>
+                <th>Status</th>
+            </thead>
+        </table>
+    </div>
+</div>
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">
+            // Remediated Hosts
+        </h3>
+    </div>
+    <div class="panel-body">
+        <table id="table_list_re_hosts" class="table table-condensed table-striped table-bordered" style="font-size: 0.9em;">
+            <thead>
+                <th>Hostname</th>
+                <th>Status</th>
+            </thead>
+        </table>
+    </div>
+</div>
+
+<!-- Add Tag Modal -->
+<div class="modal fade bs-example-modal-sm" id="AddTagModal" tabindex="-1" role="dialog" aria-labelledby="addTagModal">
+  <div class="modal-dialog modal-sm" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h4> Attach new tag to finding </h4>
+        </div>
+        <div class="modal-body">
+
+            <form action="#" method="post" class="FindingAdd">
+                {% csrf_token %}
+                <br/>
+                <input type="submit" class="btn btn-primary" value="Add Tag" />
+            </form>
+        </div>
+    </div>
+  </div>
+</div>
+{% endspaceless%}
+{% endblock %}
+
+{% block content %}
+{% spaceless %}
+<div class="page-header">
+    <div class="media">
+        <div class="media-left">
+        </div>
+        <div class="media-body">
+            <h4 class="media-heading">Finding: {{ finding.short }} ({{ finding.id }})</h4>
+        </div>
+    </div>
+</div>
+{% if messages %}{% for message in messages %}<div {% if message.tags %} class="alert alert-{{ message.tags }} alert-dismissible"{% endif %}><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{ message }}</div>{% endfor %}{% endif %}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">// Basic Information</h3>
+    </div>
+    <div class="panel-body">
+        <table class="table table-condensed" style="font-size: 0.9em; border 0px;">
+            <tbody>
+                <tr>
+                    <td>Short Name</td>
+                    <td colspan="3">{{ finding.short }}</td>
+                </tr>
+                <tr>
+                    <td>Name</td>
+                    <td>{{ finding.name }}</td>
+                    <td>UUID</td>
+                    <td>{{ finding.uuid }}</td>
+                </tr>
+                <tr>
+                    <td>Status</td>
+                    <td>{{ status | safe }}</td>
+                    <td>Severity</td>
+                    <td>{{ severity | safe }}</td>
+                </tr>
+                <tr>
+                    <td>Last Reported</td>
+                    <td>{{ finding.last_reported }}</td>
+                    <td>Escalated</td>
+                    <td>{{ escalated | safe }}</td>
+                </tr>
+                <tr>
+                    <td>Source</td>
+                    <td>{{ finding.source }}</td>
+                    <td>CVE</td>
+                    <td>{{ finding.cve }}</td>
+                </tr>
+                <tr>
+                    <td>Exploit available</td>
+                    <td>{{ exploit_available | safe }}</td>
+                    <td>Exploited in the Wild</td>
+                    <td>{{ exploited_in_the_wild | safe }}</td>
+                </tr>
+                <tr>
+                    <td>URL</td>
+                    <td colspan="3">{{ finding.url }}</td>
+                </tr>
+                <tr>
+                    <td>Port</td>
+                    <td>{{ finding.port }}/{{ finding.protocol }}</td>
+                    <td>Service</td>
+                    <td>{{ finding.service }}</td>
+                </tr>
+                <tr>
+                    <td>First Seen</td>
+                    <td>{{ finding.first_seen }}</td>
+                    <td>Last Seen</td>
+                    <td>{{ finding.last_seen }}</td>
+                </tr>
+                <tr>
+                    <td>Remediation Date</td>
+                    <td>{{ finding.date_remediated }}</td>
+                    <td>Initial Scan Date</td>
+                    <td>{{ finding.scan_date }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">// Description</h3>
+    </div>
+    <div class="panel-body">
+        {% for line in description %}
+            {{ line }}
+            <br />
+        {% endfor %}
+    </div>
+</div>
+
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">// Operations on all affected hosts</h3>
+    </div>
+    <div class="panel-body">
+        <table id="table_all_operations" class="table table-condensed table-striped table-bordered" style="font-size: 0.9em;">
+            <thead>
+                <th>Fixing Operations</th>
+                <th>Exception Operations</th>
+                <th>General Operations</th>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><a id="patchedURL" href="{% url 'findings:change_finding_affected_hosts' findingid=finding.id status='patch' %}"><button type="button" class="btn btn-sm btn-success">Patched installed</button></a></td>
+                    <td><a id="exceptionURL" href="{% url 'findings:change_finding_affected_hosts' findingid=finding.id status='exception' %}"><button type="button" class="btn btn-sm btn-warning">Exception granted</button></a></td>
+                    <td><a id="openURL" href="{% url 'findings:change_finding_affected_hosts' findingid=finding.id status='open' %}"><button type="button" class="btn btn-sm btn-danger">Still open</button></a></td>
+                </tr>
+                <tr>
+                    <td><a id="workaroundURL" href="{% url 'findings:change_finding_affected_hosts' findingid=finding.id status='workaround' %}"><button type="button" class="btn btn-sm btn-success">Workaround installed</button></a></td>
+                    <td><a id="falseURL" href="{% url 'findings:change_finding_affected_hosts' findingid=finding.id status='false' %}"><button type="button" class="btn btn-sm btn-info">False finding</button></a></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td><a id="ignoreURL" href="{% url 'findings:change_finding_affected_hosts' findingid=finding.id status='ignore' %}"><button type="button" class="btn btn-sm btn-danger">Ignore finding</button></a></td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">// Comments</h3>
+    </div>
+    <div class="panel-body">
+        <table id="table_list_comments" class="table table-condensed table-striped table-bordered" style="font-size: 0.9em;">
+            <thead>
+                <th>Date</th>
+                <th>Author</th>
+                <th>Comment</th>
+            </thead>
+        </table>
+    </div>
+</div>
+
+
+{% endspaceless%}
+{% endblock%}

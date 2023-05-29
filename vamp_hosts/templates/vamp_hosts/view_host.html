@@ -1,0 +1,751 @@
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block header %}
+<style>
+.dataTables_info  {
+    font-size: 0.8em;
+}
+
+.dataTables_paginate {
+    font-size: 0.8em;
+}
+
+.lb-md {
+  font-size: 0.9em;
+}
+</style>
+{% endblock %}
+
+{% block javascript %}
+<script src="{% static 'js/bootbox.min.js' %}"></script>
+<script type="text/javascript">
+    $(document).ready( function () {
+        $(function () {
+            $('[data-toggle="tooltip"]').tooltip()
+        })
+        // Close previous Modal on Request Exception click
+        $('#testmeURL').click(function() {
+            $('#FixFindingModal').modal('hide');
+        });
+        // EXCEPTION MODAL
+        $('#ExceptionModal').on('show.bs.modal', function (event) {
+            finding_id = $(event.relatedTarget).data('findingid');
+            host_id = $(event.relatedTarget).data('hostid');
+            var mymodaltitle = $('#ExceptionModalTitle');
+            mymodaltitle.empty();
+            mymodaltitle.append('Request Exception - (Host: '+host_id+' Finding: '+finding_id+')');
+            document.getElementById("hiddenhostid").value = host_id;
+            document.getElementById("hiddenfindingid").value = finding_id;
+        });
+        // FIXING MODAL
+        $('#FixFindingModal').on('show.bs.modal', function (event) {
+            finding_id = $(event.relatedTarget).data('val');
+            host_id = $(event.relatedTarget).data('host-id');
+            document.getElementById("patchedURL").href = "{% url 'hosts:view_ops_finding' hostid='XX' findingid='XY' operation='patch' %}".replace('XY', finding_id).replace('XX', host_id);
+            document.getElementById("openURL").href = "{% url 'hosts:view_ops_finding' hostid='XX' findingid='XY' operation='open' %}".replace('XY', finding_id).replace('XX', host_id);
+            //document.getElementById("exceptionURL").href = "{% url 'hosts:view_ops_finding' hostid='XX' findingid='XY' operation='exception' %}".replace('XY', finding_id).replace('XX', host_id);
+            document.getElementById("workaroundURL").href = "{% url 'hosts:view_ops_finding' hostid='XX' findingid='XY' operation='workaround' %}".replace('XY', finding_id).replace('XX', host_id);
+            document.getElementById("falseURL").href = "{% url 'hosts:view_ops_finding' hostid='XX' findingid='XY' operation='false' %}".replace('XY', finding_id).replace('XX', host_id);
+            document.getElementById("ignoreURL").href = "{% url 'hosts:view_ops_finding' hostid='XX' findingid='XY' operation='ignore' %}".replace('XY', finding_id).replace('XX', host_id);
+            // Request Exception Test
+            var myexception = document.getElementById('exceptionURL');
+            myexception.dataset.toggle = "modal";
+            myexception.dataset.hostid = host_id;
+            myexception.dataset.findingid = finding_id;
+            myexception.dataset.target = "#ExceptionModal";
+        });
+        // FINDING MODAL
+        $('#FindingModal').on('show.bs.modal', function (event) {
+            var myVal = '';
+            finding_id = $(event.relatedTarget).data('val');
+            var mymodaltitle = $('#FindingModalTitle');
+            mymodaltitle.empty();
+            var view_url = "{% url 'findings:view_finding' findingid=0 %}".replace(0, finding_id);
+            mymodaltitle.append('Finding Overview - <a href="'+view_url+'">Details</a>')
+            $.ajax({
+                type: "GET",
+                url: '/api/v1/findings/' + finding_id + '/details/',
+                dataType: "json",
+                success: function(result) {
+                    let items = result.results;
+                    var mymodal = $('#FindingModal');
+                    $("#findingdetailtable tbody").empty();
+                    for (var item in items) {
+                        //console.log(items[item].name);
+                        var esca = items[item].escalated;
+                        if(esca == false) {
+                            esca = '<span class="label label-success">False</span>'
+                        } else {
+                            esca = '<span class="label label-danger">True</span>'
+                        }
+                        var vstatus = items[item].status;
+                        if(vstatus == 0) {
+                            vstatus = '<span class="label label-danger">Open</span>'
+                        } else if(vstatus == 1){
+                            vstatus = '<span class="label label-success">Patched</span>'
+                        } else if(vstatus == 2){
+                            vstatus = '<span class="label label-warning">Workaround</span>'
+                        } else if(vstatus == 3){
+                            vstatus = '<span class="label label-danger">Exception</span>'
+                        } else if(vstatus == 4){
+                            vstatus = '<span class="label label-success">False Positive</span>'
+                        } else if(vstatus == 5){
+                            vstatus = '<span class="label label-danger">Ignore</span>'
+                        }
+                        var vseverity = items[item].severity;
+                        if(vseverity == 0) {
+                            vseverity = '<span class="label label-info">Information</span>'
+                        } else if(vseverity == 1) {
+                            vseverity = '<span class="label label-success">Low</span>'
+                        } else if(vseverity == 2) {
+                            vseverity = '<span class="label label-warning">Medium</span>'
+                        } else if(vseverity == 3) {
+                            vseverity = '<span class="label label-danger">High</span>'
+                        } else if(vseverity == 4) {
+                            vseverity = '<span class="label label-default">Critical</span>'
+                        }
+                        var explpub = items[item].exploit_available;
+                        if(explpub == false) {
+                            explpub = '<span class="label label-success">False</span>'
+                        } else {
+                            explpub = '<span class="label label-danger">True</span>'
+                        }
+                        var explwild = items[item].exploited_in_the_wild;
+                        if(explwild == false) {
+                            explwild = '<span class="label label-success">False</span>'
+                        } else {
+                            explwild = '<span class="label label-danger">True</span>'
+                        }
+                        mymodal.find("#findingdetailtable tbody").append('<tr><td>Name</td><td>'+items[item].name+'</td><td>Escalated</td><td>'+esca+'</td></tr>');
+                        mymodal.find("#findingdetailtable tbody").append('<tr><td>Severity</td><td>'+vseverity+'</td><td>Status</td><td>'+vstatus+'</td></tr>');
+                        mymodal.find("#findingdetailtable tbody").append('<tr><td>Short Description</td><td colspan="3">'+items[item].short+'</td></tr>');
+                        mymodal.find("#findingdetailtable tbody").append('<tr><td>Description</td><td colspan="3">'+items[item].description.replace(/\n/g, "<br />")+'</td></tr>');
+                        mymodal.find("#findingdetailtable tbody").append('<tr><td>Exploit Public</td><td>'+explpub+'</td><td>Exploited</td><td>'+explwild+'</td></tr>');
+                        mymodal.find("#findingdetailtable tbody").append('<tr><td>First Seen</td><td>'+items[item].first_seen+'</td><td>Last Seen</td><td>'+items[item].last_seen+'</td></tr>');
+                    }
+                }
+            });
+        });
+        // DISPLAY CRITICAL FINDINGS
+        var critTable = $('#table_list_critical').DataTable({
+            processing: true, serverSide: true, pageLength: 12, ordering: false, paging: true, info: false, filter: false, lengthChange: false,
+            oLanguage: { sProcessing: "<img src='{% static 'img/loading.gif' %}'>", },
+            order: [[ 1, "desc" ]],
+            autoWidth: false,
+            ajax: {
+                processing: true,
+                url: "/api/v1/host/{{ host.id }}/findings/4/severity/",
+                dataSrc: "results",
+                type: "GET",
+                dataType: "json"
+            },
+            "rowCallback": function( row, data, index ) {},
+            columns: [
+                {'data': 'short', 'sName': 'Name', 'aTargets': [ 1 ],
+                    "mRender": function (data, type, full) {
+                        return '<a href data-toggle="modal" data-val="'+full.id+'" data-target="#FindingModal">'+full.short+'</a>';
+                    },
+                },
+                {'data': 'status', 'sName': 'Status', 'aTargets': [ 2 ]},
+                {'data': 'last_seen', 'sName': 'Last Seen', 'aTargets': [ 3 ]},
+                {'data': 'ops', 'sName': 'Operations', 'aTargets': [ 4 ],
+                    "mRender": function (data, type, full) {
+                            var patched_url = "{% url 'hosts:view_ops_finding' hostid=host.id findingid='XY' operation='patch' %}".replace('XY', full.id);
+                            var detail_url = "{% url 'findings:view_finding' findingid=0 %}".replace(0, full.id);
+                            return '<a href data-toggle="modal" data-host-id="{{ host.id }}" data-val="'+full.id+'" data-target="#FixFindingModal"><span class="glyphicon glyphicon-wrench"></span></a>' +
+                                '<a href="'+patched_url+'"><span class="glyphicon glyphicon-ok" style="padding-left:8px"></span></a>' +
+                                '<a href="'+detail_url+'"><span class="glyphicon glyphicon-search" style="padding-left:8px"></span></a>';
+                    },
+                },
+            ]
+        });
+        // DISPLAY HIGH FINDINGS
+        var highTable = $('#table_list_high').DataTable({
+            processing: true, serverSide: true, pageLength: 12, ordering: false, paging: true, info: false, filter: false, lengthChange: false,
+            oLanguage: { sProcessing: "<img src='{% static 'img/loading.gif' %}'>", },
+            order: [[ 1, "desc" ]],
+            autoWidth: false,
+            ajax: {
+                processing: true,
+                url: "/api/v1/host/{{ host.id }}/findings/3/severity/",
+                dataSrc: "results",
+                type: "GET",
+                dataType: "json"
+            },
+            "rowCallback": function( row, data, index ) {},
+            columns: [
+                {'data': 'short', 'sName': 'Name', 'aTargets': [ 1 ],
+                    "mRender": function (data, type, full) {
+                        return '<a href data-toggle="modal" data-val="'+full.id+'" data-target="#FindingModal">'+full.short+'</a>';
+                    },
+                },
+                {'data': 'status', 'sName': 'Status', 'aTargets': [ 2 ]},
+                {'data': 'last_seen', 'sName': 'Last Seen', 'aTargets': [ 3 ]},
+                {'data': 'ops', 'sName': 'Operations', 'aTargets': [ 4 ],
+                    "mRender": function (data, type, full) {
+                            var patched_url = "{% url 'hosts:view_ops_finding' hostid=host.id findingid='XY' operation='patch' %}".replace('XY', full.id);
+                            var detail_url = "{% url 'findings:view_finding' findingid=0 %}".replace(0, full.id);
+                            return '<a href data-toggle="modal" data-host-id="{{ host.id }}" data-val="'+full.id+'" data-target="#FixFindingModal"><span class="glyphicon glyphicon-wrench"></span></a>' +
+                                '<a href="'+patched_url+'"><span class="glyphicon glyphicon-ok" style="padding-left:8px"></span></a>' +
+                                '<a href="'+detail_url+'"><span class="glyphicon glyphicon-search" style="padding-left:8px"></span></a>';
+                    },
+                },
+            ]
+        });
+        // DISPLAY MEDIUM FINDINGS
+        var highTable = $('#table_list_medium').DataTable({
+            processing: true, serverSide: true, pageLength: 12, ordering: false, paging: true, info: false, filter: false, lengthChange: false,
+            oLanguage: { sProcessing: "<img src='{% static 'img/loading.gif' %}'>", },
+            order: [[ 1, "desc" ]],
+            autoWidth: false,
+            ajax: {
+                processing: true,
+                url: "/api/v1/host/{{ host.id }}/findings/2/severity/",
+                dataSrc: "results",
+                type: "GET",
+                dataType: "json"
+            },
+            "rowCallback": function( row, data, index ) {},
+            columns: [
+                {'data': 'short', 'sName': 'Name', 'aTargets': [ 1 ],
+                    "mRender": function (data, type, full) {
+                        return '<a href data-toggle="modal" data-val="'+full.id+'" data-target="#FindingModal">'+full.short+'</a>';
+                    },
+                },
+                {'data': 'status', 'sName': 'Status', 'aTargets': [ 2 ]},
+                {'data': 'last_seen', 'sName': 'Last Seen', 'aTargets': [ 3 ]},
+                {'data': 'ops', 'sName': 'Operations', 'aTargets': [ 4 ],
+                    "mRender": function (data, type, full) {
+                            var patched_url = "{% url 'hosts:view_ops_finding' hostid=host.id findingid='XY' operation='patch' %}".replace('XY', full.id);
+                            var detail_url = "{% url 'findings:view_finding' findingid=0 %}".replace(0, full.id);
+                            return '<a href data-toggle="modal" data-host-id="{{ host.id }}" data-val="'+full.id+'" data-target="#FixFindingModal"><span class="glyphicon glyphicon-wrench"></span></a>' +
+                                '<a href="'+patched_url+'"><span class="glyphicon glyphicon-ok" style="padding-left:8px"></span></a>' +
+                                '<a href="'+detail_url+'"><span class="glyphicon glyphicon-search" style="padding-left:8px"></span></a>';
+                    },
+                },
+            ]
+        });
+        // DISPLAY LOW FINDINGS
+        var highTable = $('#table_list_low').DataTable({
+            processing: true, serverSide: true, pageLength: 12, ordering: false, paging: true, info: false, filter: false, lengthChange: false,
+            oLanguage: { sProcessing: "<img src='{% static 'img/loading.gif' %}'>", },
+            order: [[ 1, "desc" ]],
+            autoWidth: false,
+            ajax: {
+                processing: true,
+                url: "/api/v1/host/{{ host.id }}/findings/1/severity/",
+                dataSrc: "results",
+                type: "GET",
+                dataType: "json"
+            },
+            "rowCallback": function( row, data, index ) {},
+            columns: [
+                {'data': 'short', 'sName': 'Name', 'aTargets': [ 1 ],
+                    "mRender": function (data, type, full) {
+                        return '<a href data-toggle="modal" data-val="'+full.id+'" data-target="#FindingModal">'+full.short+'</a>';
+                    },
+                },
+                {'data': 'status', 'sName': 'Status', 'aTargets': [ 2 ]},
+                {'data': 'last_seen', 'sName': 'Last Seen', 'aTargets': [ 3 ]},
+                {'data': 'ops', 'sName': 'Operations', 'aTargets': [ 4 ],
+                    "mRender": function (data, type, full) {
+                            var patched_url = "{% url 'hosts:view_ops_finding' hostid=host.id findingid='XY' operation='patch' %}".replace('XY', full.id);
+                            var detail_url = "{% url 'findings:view_finding' findingid=0 %}".replace(0, full.id);
+                            return '<a href data-toggle="modal" data-host-id="{{ host.id }}" data-val="'+full.id+'" data-target="#FixFindingModal"><span class="glyphicon glyphicon-wrench"></span></a>' +
+                                '<a href="'+patched_url+'"><span class="glyphicon glyphicon-ok" style="padding-left:8px"></span></a>' +
+                                '<a href="'+detail_url+'"><span class="glyphicon glyphicon-search" style="padding-left:8px"></span></a>';
+                    },
+                },
+            ]
+        });
+        // DISPLAY INFORMATION FINDINGS
+        var highTable = $('#table_list_info').DataTable({
+            processing: true, serverSide: true, pageLength: 12, ordering: false, paging: true, info: false, filter: false, lengthChange: false,
+            oLanguage: { sProcessing: "<img src='{% static 'img/loading.gif' %}'>", },
+            order: [[ 1, "desc" ]],
+            autoWidth: false,
+            ajax: {
+                processing: true,
+                url: "/api/v1/host/{{ host.id }}/findings/0/severity/",
+                dataSrc: "results",
+                type: "GET",
+                dataType: "json"
+            },
+            "rowCallback": function( row, data, index ) {},
+            columns: [
+                {'data': 'short', 'sName': 'Name', 'aTargets': [ 1 ],
+                    "mRender": function (data, type, full) {
+                        return '<a href data-toggle="modal" data-val="'+full.id+'" data-target="#FindingModal">'+full.short+'</a>';
+                    },
+                },
+                {'data': 'status', 'sName': 'Status', 'aTargets': [ 2 ]},
+                {'data': 'last_seen', 'sName': 'Last Seen', 'aTargets': [ 3 ]},
+                {'data': 'ops', 'sName': 'Operations', 'aTargets': [ 4 ],
+                    "mRender": function (data, type, full) {
+                            var patched_url = "{% url 'hosts:view_ops_finding' hostid=host.id findingid='XY' operation='patch' %}".replace('XY', full.id);
+                            var detail_url = "{% url 'findings:view_finding' findingid=0 %}".replace(0, full.id);
+                            return '<a href data-toggle="modal" data-host-id="{{ host.id }}" data-val="'+full.id+'" data-target="#FixFindingModal"><span class="glyphicon glyphicon-wrench"</span></a>' +
+                                '<a href="'+patched_url+'"><span class="glyphicon glyphicon-ok" style="padding-left:8px"></span></a>' +
+                                '<a href="'+detail_url+'"><span class="glyphicon glyphicon-search" style="padding-left:8px"></span></a>';
+                    },
+                },
+            ]
+        });
+        // DISPLAY FINDINGS IN PROGRESS
+        var highTable = $('#table_progress').DataTable({
+            processing: true, serverSide: true, pageLength: 12, ordering: false, paging: true, info: false, filter: false, lengthChange: false,
+            oLanguage: { sProcessing: "<img src='{% static 'img/loading.gif' %}'>", },
+            order: [[ 1, "desc" ]],
+            autoWidth: false,
+            ajax: {
+                processing: true,
+                url: "/api/v1/host/{{ host.id }}/findings/6/status/",
+                dataSrc: "results",
+                type: "GET",
+                dataType: "json"
+            },
+            "rowCallback": function( row, data, index ) {},
+            columns: [
+                {'data': 'short', 'sName': 'Name', 'aTargets': [ 1 ],
+                    "mRender": function (data, type, full) {
+                        return '<a href data-toggle="modal" data-val="'+full.id+'" data-target="#FindingModal">'+full.short+'</a>';
+                    },
+                },
+                {'data': 'status', 'sName': 'Status', 'aTargets': [ 2 ]},
+                {'data': 'last_seen', 'sName': 'Last Seen', 'aTargets': [ 3 ]},
+                {'data': 'ops', 'sName': 'Operations', 'aTargets': [ 4 ],
+                    "mRender": function (data, type, full) {
+                            var reset_url = "{% url 'hosts:reset_exception_request' hostid=host.id findingid='XY' %}".replace('XY', full.id);
+                            var detail_url = "{% url 'findings:view_finding' findingid=0 %}".replace(0, full.id);
+                            return '<a href data-toggle="modal" data-host-id="{{ host.id }}" data-val="'+full.id+'" data-target="#FixFindingModal"><span class="glyphicon glyphicon-wrench"</span></a>' +
+                                '<a href="'+reset_url+'"><span class="glyphicon glyphicon-remove" style="padding-left:8px"></span></a>' +
+                                '<a href="'+detail_url+'"><span class="glyphicon glyphicon-search" style="padding-left:8px"></span></a>';
+                    },
+                },
+            ]
+        });
+
+        // DISPLAY TAGS (manual)
+        $.ajax({
+            type:'GET',
+            url:'/api/v1/host/{{ host.id }}/tags/manual/?format=json',
+            dataType: "json",
+            success:function(data) {
+                if(data) {
+                    $('#tag_list_manual').html('');
+                    $.each(data, function(i, item) {
+                        var tagname = data[i]['tag'];
+                        var tagid = data[i]['id'];
+                        var bgcolor = "#23819C";
+                        $('<div>').html('<span class="label label-primary" data-toggle="tooltip" data-placement="left" data-original-title="'+data[i]['description']+'" style="background-color: '+bgcolor+'">'+tagname+'</span></div>').appendTo('#tag_list_manual');
+                        $('[data-toggle="tooltip"]').tooltip()
+                    });
+                }
+            }
+        });
+        // DISPLAY TAGS (automatic)
+        $.ajax({
+            type:'GET',
+            url:'/api/v1/host/{{ host.id }}/tags/automatic/?format=json',
+            dataType: "json",
+            success:function(data) {
+                if(data) {
+                    $('#tag_list_automatic').html('');
+                    $.each(data, function(i, item) {
+                        var tagname = data[i]['tag'];
+                        var tagid = data[i]['id'];
+                        var bgcolor = "#23819C";
+                        $('<div>').html('<span class="label label-primary" data-toggle="tooltip" data-placement="left" data-original-title="'+data[i]['description']+'" style="background-color: '+bgcolor+'">'+tagname+'</span></div>').appendTo('#tag_list_automatic');
+                        $('[data-toggle="tooltip"]').tooltip()
+                    });
+                }
+            }
+        });
+        // DISPLAY COMMENTS
+        var CommentsTable = $('#table_list_comments').DataTable({
+            processing: true, serverSide: true, pageLength: 30, ordering: false, paging: true, info: false, filter: false, lengthChange: false,
+            oLanguage: { sProcessing: "<img src='{% static 'img/loading.gif' %}'>", },
+            order: [[ 0, "desc" ]],
+            autoWidth: false,
+            ajax: {
+                processing: true,
+                url: "/api/v1/host/{{ host.id }}/comments/",
+                dataSrc: "results",
+                type: "GET",
+                dataType: "json"
+            },
+            "rowCallback": function( row, data, index ) {},
+            columns: [
+                {'data': 'creation_time', 'sName': 'Date', 'aTargets': [ 1 ],
+                },
+                {'data': 'author', 'sName': 'Author', 'aTargets': [ 2 ],
+                },
+                {'data': 'ctext', 'sName': 'Comment', 'aTargets': [ 3 ],
+                },
+            ]
+        });
+        //
+    });
+</script>
+{% endblock%}
+
+{% block sidebar %}
+{% spaceless %}
+<div class="page-header">
+    <div class="media">
+        <div class="media-left">
+        </div>
+        <div class="media-body">
+            <h4 class="media-heading">Information</h4>
+        </div>
+    </div>
+</div>
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">
+            // Tags
+            <a href="#" data-toggle="modal" data-target="#AddTagModal">
+                <span data-toggle="tooltip" data-placement="left" data-original-title="add tag" class="glyphicon glyphicon-plus pull-right" aria-hidden="true" style="padding-left:8px"></span>
+                        </a>
+            <a href="#">
+                <span data-toggle="tooltip" data-placement="left" data-original-title="refresh tags" class="glyphicon glyphicon-refresh pull-right" aria-hidden="true" style="padding-left:8px"></span>
+            </a>
+        </h3>
+    </div>
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-sm-6">
+                <div id="tag_list_automatic"></div>
+            </div>
+            <div class="col-sm-6">
+                <div id="tag_list_manual"></div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">
+            // Contacts
+        </h3>
+    </div>
+    <div class="panel-body">
+    </div>
+</div>
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">
+            // Comments
+        </h3>
+    </div>
+    <div class="panel-body">
+        <table id="table_list_comments" class="table table-condensed table-striped table-bordered" style="font-size: 0.9em;">
+            <thead>
+                <th>Date</th>
+                <th>Author</th>
+                <th>Comment</th>
+            </thead>
+        </table>
+    </div>
+</div>
+
+
+<!-- Add Tag Modal -->
+<div class="modal fade bs-example-modal-sm" id="AddTagModal" tabindex="-1" role="dialog" aria-labelledby="addTagModal">
+  <div class="modal-dialog modal-sm" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h4> Attach new tag to host </h4>
+        </div>
+        <div class="modal-body">
+
+            <form action="{%url 'hosts:host_add_tag' hostid=host.id %}" method="post" class="HostAdd">
+                {% csrf_token %}
+                {{ tagform }}
+                <br/>
+                <input type="submit" class="btn btn-primary" value="Add Tag" />
+            </form>
+        </div>
+    </div>
+  </div>
+</div>
+
+
+{% endspaceless%}
+{% endblock %}
+
+{% block content %}
+{% spaceless %}
+<div class="page-header">
+    <div class="media">
+        <div class="media-left">
+        </div>
+        <div class="media-body">
+            <h4 class="media-heading">Host: {{ host.name }} ({{ host.id }})</h4>
+        </div>
+    </div>
+</div>
+{% if messages %}{% for message in messages %}<div {% if message.tags %} class="alert alert-{{ message.tags }} alert-dismissible"{% endif %}><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{ message }}</div>{% endfor %}{% endif %}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">// Basic Information</h3>
+    </div>
+    <div class="panel-body">
+        <table class="table table-condensed" style="font-size: 0.9em; border 0px;">
+            <tbody>
+                <tr>
+                    <td>Name</td>
+                    <td>{{ host.name }}</td>
+                    <td>IP</td>
+                    <td>{{ host.ip }}</td>
+                </tr>
+                <tr>
+                    <td>FQDN</td>
+                    <td>{{ host.fqdn }}</td>
+                    <td>rDNS</td>
+                    <td>{{ host.rdns }}</td>
+                </tr>
+                <tr>
+                    <td>NetBios</td>
+                    <td>{{ host.netbios_name }}</td>
+                    <td>Internet Facing</td>
+                    <td>
+                        {% if host.internet_facing is True%}
+                        <span class="label label-danger">{{ host.internet_facing }}</span>
+                        {% else %}
+                        <span class="label label-success">{{ host.internet_facing }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>OS</td>
+                    <td>{{ host.os }}</td>
+                    <td>Predicted OS</td>
+                    <td>{{ host.predicted_os }}</td>
+                </tr>
+                <tr>
+                    <td>First Scan</td>
+                    <td>{{ host.first_scan }}</td>
+                    <td>Last Scan</td>
+                    <td>{{ host.last_scan }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<!-- Open Findings -->
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">// Open Findings</h3>
+    </div>
+    <div class="panel-body">
+
+<div role="tabpanel">
+    <!-- Nav tabs -->
+    <ul class="nav nav-tabs" role="tablist">
+        <li role="presentation" {% if activetab == 'critical' %}class="active"{% endif %}>
+            <a href="#fcritical" aria-controls="fcritical" role="tab" data-toggle="tab">
+                <span class="label lb-md label-default">Critical Findings <span class="label label-default">{{ crit_count }}</span></span>
+            </a>
+        </li>
+        <li role="presentation" {% if activetab == 'high' %}class="active"{% endif %}>
+            <a href="#fhigh" aria-controls="fhigh" role="tab" data-toggle="tab">
+                <span class="label lb-md label-danger">High Findings <span class="label label-default">{{ high_count }}</span></span>
+            </a>
+        </li>
+        <li role="presentation" {% if activetab == 'medium' %}class="active"{% endif %}>
+            <a href="#fmedium" aria-controls="fmedium" role="tab" data-toggle="tab">
+                <span class="label lb-md label-warning">Medium Findings <span class="label label-default">{{ med_count }}</span></span>
+            </a>
+        </li>
+        <li role="presentation" {% if activetab == 'low' %}class="active"{% endif %}>
+            <a href="#flow" aria-controls="flow" role="tab" data-toggle="tab">
+                <span class="label lb-md label-success">Low Findings <span class="label label-default">{{ low_count }}</span></span>
+            </a>
+        </li>
+        <li role="presentation" {% if activetab == 'info' %}class="active"{% endif %}>
+            <a href="#finfo" aria-controls="finfo" role="tab" data-toggle="tab">
+                <span class="label lb-md label-info">Information <span class="label label-default">{{ info_count }}</span></span>
+            </a>
+        </li>
+    </ul>
+    <div class="tab-content">
+        <!-- Tab panes -->
+        <div role="tabpanel" class="tab-pane fade {% if activetab == 'critical' %}in active{% endif %}" id="fcritical">
+            <table id="table_list_critical" class="table table-condensed table-striped table-bordered" style="font-size: 0.9em;" width="100%">
+                <thead>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Last Seen</th>
+                    <th>Operations</th>
+                </thead>
+            </table>
+        </div>
+        <div role="tabpanel" class="tab-pane fade {% if activetab == 'high' %}in active{% endif %}" id="fhigh">
+            <table id="table_list_high" class="table table-condensed table-striped table-bordered" style="font-size: 0.9em;" width="100%">
+                <thead>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Last Seen</th>
+                    <th>Operations</th>
+                </thead>
+            </table>
+        </div>
+        <div role="tabpanel" class="tab-pane fade {% if activetab == 'medium' %}in active{% endif %}" id="fmedium">
+            <table id="table_list_medium" class="table table-condensed table-striped table-bordered" style="font-size: 0.9em;" width="100%">
+                <thead>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Last Seen</th>
+                    <th>Operations</th>
+                </thead>
+            </table>
+        </div>
+        <div role="tabpanel" class="tab-pane fade {% if activetab == 'low' %}in active{% endif %}" id="flow">
+            <table id="table_list_low" class="table table-condensed table-striped table-bordered" style="font-size: 0.9em;" width="100%">
+                <thead>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Last Seen</th>
+                    <th>Operations</th>
+                </thead>
+            </table>
+        </div>
+        <div role="tabpanel" class="tab-pane fade {% if activetab == 'info' %}in active{% endif %}" id="finfo">
+            <table id="table_list_info" class="table table-condensed table-striped table-bordered" style="font-size: 0.9em;" width="100%">
+                <thead>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Last Seen</th>
+                    <th>Operations</th>
+                </thead>
+            </table>
+        </div>
+    </div>
+</div>
+
+    </div>
+</div>
+
+{% if waiting_exception > 0 %}
+<!-- In Progress -->
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">// Waiting for Exception</h3>
+    </div>
+    <div class="panel-body">
+            <table id="table_progress" class="table table-condensed table-striped table-bordered" style="font-size: 0.9em;" width="100%">
+                <thead>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Last Seen</th>
+                    <th>Operations</th>
+                </thead>
+            </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Finding Modal -->
+<div class="modal fade" id="FindingModal" tabindex="-1" role="dialog" aria-labelledby="FindingModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="FindingModalTitle">Finding Overview</h4>
+            </div>
+            <div class="modal-body">
+                <table id="findingdetailtable" class="table table-condensed" style="font-size: 0.9em; border 0px;">
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- end modal -->
+<!-- Fix Finding Modal -->
+<div class="modal fade bs-example-modal-sm" id="FixFindingModal" tabindex="-1" role="dialog" aria-labelledby="fixfindingModal">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4> Finding Operations </h4>
+            </div>
+            <div class="modal-body">
+                <table id="operationsTable" class="table table-condensed" style="font-size: 0.9em; border 0px;">
+                    <thead>
+                        <th>Fixing Operations</th>
+                        <th>Exception Operations</th>
+                        <th>General Operations</th>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><a id="patchedURL" href="#">Patched installed</a></td>
+                            <td><a id="exceptionURL" href="#">Request Exception</a></td>
+                            <td><a id="openURL" href="#">Still open</a></td>
+                        </tr>
+                        <tr>
+                            <td><a id="workaroundURL" href="#">Workaround installed</a></td>
+                            <td><a id="falseURL" href="#">False finding</a></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td><a id="ignoreURL" href="#">Ignore finding</a></td>
+                            <td></td>
+                        </tr>
+                        <!-- for testing
+                        <tr>
+                            <td></td>
+                            <td><a id="testmeURL" href="#">Test Me</a></td>
+                            <td></td>
+                        </tr>
+                        -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- end modal -->
+<!-- Request Exception Modal -->
+<div class="modal fade" id="ExceptionModal" tabindex="-1" role="dialog" aria-labelledby="ExceptionModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="ExceptionModalTitle">Request Exception</h4>
+            </div>
+            <div class="modal-body">
+                <form action="{%url 'exceptions:add_request' hostid=host.id %}" method="post" class="ExpcetionRequest">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="customReason">Exception Reason:</label>
+                        <input type="text" class="form-control" placeholder="Reason" aria-describedby="basic-addon1" name="customreason" id="customReason">
+                    </div>
+                    <div class="form-group">
+                        <label for="customRange2">Number of Days:</label>
+                        <input type="range" class="custom-range" value="30" min="10" max="365" name="dayrange" id="customRange2" oninput="this.nextElementSibling.value = this.value">
+                        <output>30</output>
+                    </div>
+                    <input type="hidden" id="hiddenhostid" name="hiddenhostid" value="">
+                    <input type="hidden" id="hiddenfindingid" name="hiddenfindingid" value="">
+                    <br/>
+                    <input type="submit" class="btn btn-primary" value="Request Exception" />
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- end modal -->
+
+{% endspaceless%}
+{% endblock%}
