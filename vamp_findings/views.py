@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 
 from vamp_scans.models import Finding, Comment
+from vamp_exceptions.models import Exceptions
 
 # Create your views here.
 
@@ -30,9 +31,13 @@ def change_finding_affected_hosts(request, findingid, status):
         'author': request.user,
         'ctext': ''
     }
+    # remove exception entries that were created for all at once
+    for entry in objs:
+        Exceptions.objects.filter(finding=entry, approved=True, reason='Grant all exception').delete()
     # change status of all affected hosts
     changed = False
     if status == 'open':
+        # update findings entries
         objs.update(status=0, date_remediated=None)
         messages.info(request, 'Finding changed to "%s" for all affected hosts!' % status)
         changed = True
@@ -45,6 +50,22 @@ def change_finding_affected_hosts(request, findingid, status):
         messages.info(request, 'Finding changed to "%s" for all affected hosts!' % status)
         changed = True
     elif status == 'exception':
+        # create exception entries
+        for entry in objs:
+            host = entry.host
+            exc_entry = {
+                'finding': entry,
+                'host': host,
+                'requestor': request.user,
+                'approver': request.user,
+                'reason': 'Grant all exception',
+                'duration': 90,
+                'approved': True,
+                'still_valid': True
+            }
+            e = Exceptions(**exc_entry)
+            e.save()
+        # update finding entries
         objs.update(status=3, date_remediated=datetime.now())
         messages.info(request, 'Finding changed to "%s" for all affected hosts!' % status)
         changed = True
