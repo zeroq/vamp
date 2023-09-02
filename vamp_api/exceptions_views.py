@@ -73,3 +73,20 @@ def list_expired_exceptions(request, format=None):
     exceptions = paginator.paginate_queryset(queryset, request)
     serializer = ExceptionSerializer(instance=exceptions, many=True)
     return paginator.get_paginated_response(serializer.data)
+
+@api_view(['GET'])
+@authentication_classes((SessionAuthentication, ))
+@permission_classes((IsAuthenticated,))
+def list_exceptions_host(request, hostid, format=None):
+    """List all granted and still valid exception requests for given host
+    """
+    paginator = CustomPaginator()
+    queryset = Exceptions.objects.filter(approved=True, still_valid=True, host__id=hostid)
+    order_by_column, order_direction = get_ordering_vars(request.query_params,
+                                                         default_column='last_update',
+                                                         default_direction='-')
+    if order_by_column:
+        queryset = queryset.order_by('%s%s' % (order_direction, order_by_column))
+    exceptions = paginator.paginate_queryset(queryset, request)
+    serializer = ExceptionSerializer(instance=exceptions, many=True)
+    return paginator.get_paginated_response(serializer.data)

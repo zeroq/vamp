@@ -28,6 +28,7 @@ urlpatterns = [
     path('v1/exceptions/', exceptions_views.list_open_exceptions, name='list_open_exceptions'),
     path('v1/exceptions/granted/', exceptions_views.list_granted_exceptions, name='list_granted_exceptions'),
     path('v1/exceptions/expired/', exceptions_views.list_expired_exceptions, name='list_expired_exceptions'),
+    path('v1/exceptions/<int:hostid>/', exceptions_views.list_exceptions_host, name='list_exceptions_host'),
     # tenable api
     path('v1/endpoints/tenable/', settings_views.list_tenable_endpoints, name='list_tenable_endpoints'),
     # statistics api

@@ -293,6 +293,41 @@
                 },
             ]
         });
+        // DISPLAY FINDINGS WITH EXCEPTION
+        var highTable = $('#table_exceptions').DataTable({
+            processing: true, serverSide: true, pageLength: 12, ordering: false, paging: true, info: false, filter: false, lengthChange: false,
+            oLanguage: { sProcessing: "<img src='{% static 'img/loading.gif' %}'>", },
+            order: [[ 1, "desc" ]],
+            autoWidth: false,
+            ajax: {
+                processing: true,
+                url: "/api/v1/exceptions/{{ host.id }}/",
+                dataSrc: "results",
+                type: "GET",
+                dataType: "json"
+            },
+            "rowCallback": function( row, data, index ) {},
+            columns: [
+                {'data': 'vuln', 'sName': 'Name', 'aTargets': [ 1 ]},
+                {'data': 'last_update', 'sName': 'Status', 'aTargets': [ 2 ]},
+                {'data': 'last_update', 'sName': 'Days Left', 'aTargets': [ 3 ],
+                    "mRender": function (data, type, full) {
+                        var date1 = new Date(data);
+                        var date2 = new Date(data);
+                        date2.setDate(date2.getDate() + full.duration);
+                        var Difference_In_Time = date2.getTime() - date1.getTime();
+                        var Difference_In_Days = Difference_In_Time / (1000 * 3600 * 24);
+                        return Difference_In_Days;
+                    },
+                },
+                {'data': 'ops', 'sName': 'Operations', 'aTargets': [ 4 ],
+                    "mRender": function (data, type, full) {
+                        var reset_url = "{% url 'hosts:reset_exception_request' hostid=host.id findingid='XY' %}".replace('XY', full.finding);
+                        return '<a href="'+reset_url+'"><span class="glyphicon glyphicon-remove" style="padding-left:8px"></span></a>';
+                    },
+                },
+            ]
+        });
         // DISPLAY FINDINGS IN PROGRESS
         var highTable = $('#table_progress').DataTable({
             processing: true, serverSide: true, pageLength: 12, ordering: false, paging: true, info: false, filter: false, lengthChange: false,
@@ -648,6 +683,24 @@
 </div>
 {% endif %}
 
+{% if have_exception > 0%}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">// Current Exceptions</h3>
+    </div>
+    <div class="panel-body">
+            <table id="table_exceptions" class="table table-condensed table-striped table-bordered" style="font-size: 0.9em;" width="100%">
+                <thead>
+                    <th>Name</th>
+                    <th>Last Update</th>
+                    <th>Days Left</th>
+                    <th>Operations</th>
+                </thead>
+            </table>
+    </div>
+</div>
+{% endif %}
+
 <!-- Finding Modal -->
 <div class="modal fade" id="FindingModal" tabindex="-1" role="dialog" aria-labelledby="FindingModal">
     <div class="modal-dialog" role="document">
@@ -669,6 +722,7 @@
     </div>
 </div>
 <!-- end modal -->
+
 <!-- Fix Finding Modal -->
 <div class="modal fade bs-example-modal-sm" id="FixFindingModal" tabindex="-1" role="dialog" aria-labelledby="fixfindingModal">
     <div class="modal-dialog modal-sm" role="document">

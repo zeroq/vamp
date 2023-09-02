@@ -62,6 +62,7 @@ def view_host(request, hostid):
     context['low_count'] = Finding.objects.filter(host_id=host_obj.id, status=0, severity=1).count()
     context['info_count'] = Finding.objects.filter(host_id=host_obj.id, status=0, severity=0).count()
     context['waiting_exception'] = Finding.objects.filter(host_id=hostid, status=6).count()
+    context['have_exception'] = Exceptions.objects.filter(host=host_obj).count()
     activeTab = ''
     if context['crit_count'] > 0:
         activeTab = 'critical'
