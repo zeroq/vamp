@@ -12,16 +12,29 @@ def open_exceptions(request):
     count = Exceptions.objects.filter(approved=False).count()
     return 'Open Exceptions <span class="label label-primary">%s</span>' % count
 
+def granted_exceptions(request):
+    count = Exceptions.objects.filter(approved=True, still_valid=True).count()
+    return 'Granted Exceptions <span class="label label-warning">%s</span>' % count
+
+def expired_exceptions(request):
+    count = Exceptions.objects.filter(approved=True, still_valid=False).count()
+    return 'Expired Exceptions <span class="label label-danger">%s</span>' % count
+
 def open_ignore(request):
     count = Ignore.objects.filter(approved=False).count()
     return 'Open Ignore Requests <span class="label label-primary">%s</span>' % count
 
+def granted_ignore(request):
+    count = Ignore.objects.filter(approved=True).count()
+    return 'Granted Ignore Requests <span class="label label-warning">%s</span>' % count
+
+
 files_childs = (
     MenuItem(open_exceptions, reverse("exceptions:list_exceptions"), weight=10),
-    MenuItem("Granted Exceptions", reverse("exceptions:list_granted_exceptions"), weight=20),
-    MenuItem("Expired Exceptions", reverse("exceptions:list_expired_exceptions"), weight=30),
+    MenuItem(granted_exceptions, reverse("exceptions:list_granted_exceptions"), weight=20),
+    MenuItem(expired_exceptions, reverse("exceptions:list_expired_exceptions"), weight=30),
     MenuItem(open_ignore, reverse("exceptions:list_ignore_requests"), weight=40, separator=True),
-    MenuItem("Granted Ignore Requests", reverse("exceptions:list_granted_ignore"), weight=50),
+    MenuItem(granted_ignore, reverse("exceptions:list_granted_ignore"), weight=50),
 )
 
 Menu.add_item("main", MenuItem(top_hosts,

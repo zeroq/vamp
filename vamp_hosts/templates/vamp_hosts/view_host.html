@@ -139,6 +139,7 @@
                         mymodal.find("#findingdetailtable tbody").append('<tr><td>Description</td><td colspan="3">'+items[item].description.replace(/\n/g, "<br />")+'</td></tr>');
                         mymodal.find("#findingdetailtable tbody").append('<tr><td>Exploit Public</td><td>'+explpub+'</td><td>Exploited</td><td>'+explwild+'</td></tr>');
                         mymodal.find("#findingdetailtable tbody").append('<tr><td>First Seen</td><td>'+items[item].first_seen+'</td><td>Last Seen</td><td>'+items[item].last_seen+'</td></tr>');
+                        mymodal.find("#findingdetailtable tbody").append('<tr><td>Remediation Date</td><td>'+items[item].date_remediated+'</td><td></td><td></td></tr>');
                     }
                 }
             });
