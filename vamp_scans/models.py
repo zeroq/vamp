@@ -81,6 +81,7 @@ class Finding(models.Model):
         IGNORE = 5, 'ignore'
         PROGRESS = 6, 'progress'
     status = models.IntegerField(choices=RemediationChoices.choices, default=RemediationChoices.OPEN)
+    request_type = models.CharField(max_length=50, default='')
     description = models.TextField(blank=True)
     short = models.CharField(max_length=2048, blank=True)
     exploit_available = models.BooleanField(default=False)

@@ -29,6 +29,16 @@
         $('#testmeURL').click(function() {
             $('#FixFindingModal').modal('hide');
         });
+        // IGNORE MODAL
+        $('#IgnoreModal').on('show.bs.modal', function (event) {
+            finding_id = $(event.relatedTarget).data('findingid');
+            host_id = $(event.relatedTarget).data('hostid');
+            var mymodaltitle = $('#IgnoreModalTitle');
+            mymodaltitle.empty();
+            mymodaltitle.append('Request Ignore - (Host: '+host_id+' Finding: '+finding_id+')');
+            document.getElementById("ihiddenhostid").value = host_id;
+            document.getElementById("ihiddenfindingid").value = finding_id;
+        });
         // EXCEPTION MODAL
         $('#ExceptionModal').on('show.bs.modal', function (event) {
             finding_id = $(event.relatedTarget).data('findingid');
@@ -45,11 +55,16 @@
             host_id = $(event.relatedTarget).data('host-id');
             document.getElementById("patchedURL").href = "{% url 'hosts:view_ops_finding' hostid='XX' findingid='XY' operation='patch' %}".replace('XY', finding_id).replace('XX', host_id);
             document.getElementById("openURL").href = "{% url 'hosts:view_ops_finding' hostid='XX' findingid='XY' operation='open' %}".replace('XY', finding_id).replace('XX', host_id);
-            //document.getElementById("exceptionURL").href = "{% url 'hosts:view_ops_finding' hostid='XX' findingid='XY' operation='exception' %}".replace('XY', finding_id).replace('XX', host_id);
             document.getElementById("workaroundURL").href = "{% url 'hosts:view_ops_finding' hostid='XX' findingid='XY' operation='workaround' %}".replace('XY', finding_id).replace('XX', host_id);
             document.getElementById("falseURL").href = "{% url 'hosts:view_ops_finding' hostid='XX' findingid='XY' operation='false' %}".replace('XY', finding_id).replace('XX', host_id);
-            document.getElementById("ignoreURL").href = "{% url 'hosts:view_ops_finding' hostid='XX' findingid='XY' operation='ignore' %}".replace('XY', finding_id).replace('XX', host_id);
-            // Request Exception Test
+            //document.getElementById("ignoreURL").href = "{% url 'hosts:view_ops_finding' hostid='XX' findingid='XY' operation='ignore' %}".replace('XY', finding_id).replace('XX', host_id);
+            // Ignore Request
+            var myignore = document.getElementById('ignoreURL');
+            myignore.dataset.toggle = "modal";
+            myignore.dataset.hostid = host_id;
+            myignore.dataset.findingid = finding_id;
+            myignore.dataset.target = "#IgnoreModal";
+            // Request Exception
             var myexception = document.getElementById('exceptionURL');
             myexception.dataset.toggle = "modal";
             myexception.dataset.hostid = host_id;
@@ -328,7 +343,7 @@
                 },
             ]
         });
-        // DISPLAY FINDINGS IN PROGRESS
+        // DISPLAY EXCEPTIONS IN PROGRESS
         var highTable = $('#table_progress').DataTable({
             processing: true, serverSide: true, pageLength: 12, ordering: false, paging: true, info: false, filter: false, lengthChange: false,
             oLanguage: { sProcessing: "<img src='{% static 'img/loading.gif' %}'>", },
@@ -336,7 +351,7 @@
             autoWidth: false,
             ajax: {
                 processing: true,
-                url: "/api/v1/host/{{ host.id }}/findings/6/status/",
+                url: "/api/v1/host/{{ host.id }}/exception/waiting/",
                 dataSrc: "results",
                 type: "GET",
                 dataType: "json"
@@ -353,6 +368,39 @@
                 {'data': 'ops', 'sName': 'Operations', 'aTargets': [ 4 ],
                     "mRender": function (data, type, full) {
                             var reset_url = "{% url 'hosts:reset_exception_request' hostid=host.id findingid='XY' %}".replace('XY', full.id);
+                            var detail_url = "{% url 'findings:view_finding' findingid=0 %}".replace(0, full.id);
+                            return '<a href data-toggle="modal" data-host-id="{{ host.id }}" data-val="'+full.id+'" data-target="#FixFindingModal"><span class="glyphicon glyphicon-wrench"</span></a>' +
+                                '<a href="'+reset_url+'"><span class="glyphicon glyphicon-remove" style="padding-left:8px"></span></a>' +
+                                '<a href="'+detail_url+'"><span class="glyphicon glyphicon-search" style="padding-left:8px"></span></a>';
+                    },
+                },
+            ]
+        });
+        // DISPLAY IGNORE IN PROGRESS
+        var highTable = $('#table_progress_ignore').DataTable({
+            processing: true, serverSide: true, pageLength: 12, ordering: false, paging: true, info: false, filter: false, lengthChange: false,
+            oLanguage: { sProcessing: "<img src='{% static 'img/loading.gif' %}'>", },
+            order: [[ 1, "desc" ]],
+            autoWidth: false,
+            ajax: {
+                processing: true,
+                url: "/api/v1/host/{{ host.id }}/ignore/waiting/",
+                dataSrc: "results",
+                type: "GET",
+                dataType: "json"
+            },
+            "rowCallback": function( row, data, index ) {},
+            columns: [
+                {'data': 'short', 'sName': 'Name', 'aTargets': [ 1 ],
+                    "mRender": function (data, type, full) {
+                        return '<a href data-toggle="modal" data-val="'+full.id+'" data-target="#FindingModal">'+full.short+'</a>';
+                    },
+                },
+                {'data': 'status', 'sName': 'Status', 'aTargets': [ 2 ]},
+                {'data': 'last_seen', 'sName': 'Last Seen', 'aTargets': [ 3 ]},
+                {'data': 'ops', 'sName': 'Operations', 'aTargets': [ 4 ],
+                    "mRender": function (data, type, full) {
+                            var reset_url = "{% url 'hosts:reset_ignore_request' hostid=host.id findingid='XY' %}".replace('XY', full.id);
                             var detail_url = "{% url 'findings:view_finding' findingid=0 %}".replace(0, full.id);
                             return '<a href data-toggle="modal" data-host-id="{{ host.id }}" data-val="'+full.id+'" data-target="#FixFindingModal"><span class="glyphicon glyphicon-wrench"</span></a>' +
                                 '<a href="'+reset_url+'"><span class="glyphicon glyphicon-remove" style="padding-left:8px"></span></a>' +
@@ -682,6 +730,23 @@
     </div>
 </div>
 {% endif %}
+{% if waiting_ignore > 0 %}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h3 class="panel-title">// Waiting for permanent Ignore</h3>
+    </div>
+    <div class="panel-body">
+            <table id="table_progress_ignore" class="table table-condensed table-striped table-bordered" style="font-size: 0.9em;" width="100%">
+                <thead>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Last Seen</th>
+                    <th>Operations</th>
+                </thead>
+            </table>
+    </div>
+</div>
+{% endif %}
 
 {% if have_exception > 0%}
 <div class="panel panel-default">
@@ -791,6 +856,34 @@
                     <input type="hidden" id="hiddenfindingid" name="hiddenfindingid" value="">
                     <br/>
                     <input type="submit" class="btn btn-primary" value="Request Exception" />
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- end modal -->
+<!-- Request Ignore Modal -->
+<div class="modal fade" id="IgnoreModal" tabindex="-1" role="dialog" aria-labelledby="IgnoreModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="IgnoreModalTitle">Request Permanent Ignore</h4>
+            </div>
+            <div class="modal-body">
+                <form action="{%url 'exceptions:add_ignore_request' hostid=host.id %}" method="post" class="IgnoreRequest">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="customReason">Ignore Reason:</label>
+                        <input type="text" class="form-control" placeholder="Reason" aria-describedby="basic-addon1" name="customreason" id="customReason">
+                    </div>
+                    <input type="hidden" id="ihiddenhostid" name="hiddenhostid" value="">
+                    <input type="hidden" id="ihiddenfindingid" name="hiddenfindingid" value="">
+                    <br/>
+                    <input type="submit" class="btn btn-primary" value="Request Ignore" />
                 </form>
             </div>
             <div class="modal-footer">

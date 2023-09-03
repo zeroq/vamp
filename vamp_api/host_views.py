@@ -196,3 +196,40 @@ def list_hosts(request, format=None):
     serializer = HostSerializer(instance=hosts, many=True)
     return paginator.get_paginated_response(serializer.data)
 
+@api_view(['GET'])
+@authentication_classes((SessionAuthentication, ))
+@permission_classes((IsAuthenticated,))
+def list_findings_waiting(request, hostid, rtype, format=None):
+    """List all Findings in status progress of given type
+    """
+    paginator = CustomPaginator()
+    if request.query_params:
+        if 'search[value]' in request.query_params:
+            search_value = request.query_params['search[value]']
+        else:
+            search_value = None
+    else:
+        search_value = None
+    ### create queryset
+    queryset = Finding.objects.filter(host_id=hostid, status=6, request_type=rtype)
+    ### filter by search value
+    if search_value and len(search_value)>1:
+        queryset = queryset.filter(
+            Q(name__istartswith=search_value)|
+            Q(source__istartswith=search_value)|
+            Q(service__istartswith=search_value)|
+            Q(cve__istartswith=search_value)|
+            Q(severity__startswith=search_value)|
+            Q(status__istartswith=search_value)|
+            Q(short__istartswith=search_value)
+        )
+    ### get variables
+    order_by_column, order_direction = get_ordering_vars(request.query_params,
+                                                         default_column='last_seen',
+                                                         default_direction='-')
+    ### order queryset
+    if order_by_column:
+        queryset = queryset.order_by('%s%s' % (order_direction, order_by_column))
+    hosts = paginator.paginate_queryset(queryset, request)
+    serializer = FindingSerializer(instance=hosts, many=True)
+    return paginator.get_paginated_response(serializer.data)

@@ -3,7 +3,22 @@ from rest_framework import serializers
 
 from vamp_api.models import TenableAPI
 from vamp_scans.models import Host, Finding, Comment, Tag, HostComment
-from vamp_exceptions.models import Exceptions
+from vamp_exceptions.models import Exceptions, Ignore
+
+class IgnoreSerializer(serializers.ModelSerializer):
+    host_name = serializers.CharField(source='host.name')
+    vuln = serializers.CharField(source='finding.short')
+    approved = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Ignore
+        fields = '__all__'
+    
+    def get_approved(self, obj):
+        if obj.approved == False:
+            return '<span class="label label-danger">False</span>'
+        else:
+            return '<span class="label label-success">True</span>'
 
 class ExceptionSerializer(serializers.ModelSerializer):
     host_name = serializers.CharField(source='host.name')

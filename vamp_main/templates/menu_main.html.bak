@@ -2,7 +2,7 @@
 {% spaceless %}
 <ul class="nav navbar-nav">
     {% for item in menu %}
-        {% if item.separator %}<li>------------</li>{% endif %}
+        {% if 'separator' in item and item.separator %}<li>------------</li>{% endif %}
         {% if item.url in request.path and request.path != "/" and item.url != "/" or item.url == request.path %}
             <li class="active">
             {% if item.children|length > 0 %}
@@ -11,7 +11,7 @@
             </a>
             <ul class="dropdown-menu" role="menu">
                 {% for child in item.children %}
-                    {% if child.separator %}<li style="border-bottom: 1px solid #000;"></li>{% endif %}
+                    {% if 'separator' in item and child.separator %}<li style="border-bottom: 1px solid #000;"></li>{% endif %}
                     {% if child.url == request.path %}
                         <li class="active">
                     {% else %}
@@ -33,7 +33,7 @@
             </a>
             <ul class="dropdown-menu" role="menu">
                 {% for child in item.children %}
-                    {% if child.separator %}<li style="border-bottom: 1px solid #ccc;"></li>{% endif %}
+                    {% if 'separator' in item and child.separator %}<li style="border-bottom: 1px solid #ccc;"></li>{% endif %}
                     <li>
                     <a href="{{ child.url }}">{% if 'image' in child and child.image %}<img src="{% static child.image %}" height="16" style="vertical-align:middle"/>{% endif %}&nbsp;{{ child.title|safe }}</a>
                     </li>
