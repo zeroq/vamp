@@ -9,7 +9,7 @@ import json
 import uuid
 import re
 
-#from tenable.sc import TenableSC
+from tenable.sc import TenableSC
 
 from vamp_api.models import TenableAPI
 from vamp_main.utils import get_service_name
