@@ -149,7 +149,7 @@ def tenable(report):
     host_obj.save()
     ### collect finding
     svc_name = get_service_name(report['port'], report['protocol'].lower())
-    scan_date = make_aware(datetime.datetime.fromtimestamp(int(report['firstSeen']))
+    scan_date = make_aware(datetime.datetime.fromtimestamp(int(report['firstSeen'])))
     finding = {
         'host': host_obj,
         'name': svc_name,
