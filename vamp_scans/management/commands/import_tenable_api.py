@@ -235,34 +235,9 @@ class Command(BaseCommand):
                     continue
             if len(ask_severities)==0:
                 ask_severities = [4,3,2,1]
-            print(ask_severities)
             # connect to Tenable API
-            #sc = TenableSC(tenableObj.server, access_key=tenableObj.access_key, secret_key=tenableObj.secret_key)
-            #for sev in ask_severities:
-            #    for vuln in sc.analysis.vulns(filters=[('severity', '=', '%s' % sev),], tool='listservices'):
-            #        # start ingesting
-            #        tenable(data)
-
-
-
-class OldCommand(BaseCommand):
-    def __init__(self, *args, **kwargs):
-        super(Command, self).__init__(*args, **kwargs)
-
-    def add_arguments(self, parser):
-        # Positional arguments
-        parser.add_argument('filename', type=str)
-
-    def handle(self, *args, **options):
-        fn = options['filename']
-        if not os.path.exists(fn):
-            print('file does not exist!')
-            sys.exit(1)
-        if not fn.endswith('.json'):
-            print('file is not a tenable scan result JSON!')
-            sys.exit(1)
-        ### read file content
-        with open(fn) as fp:
-            data = json.loads(fp.read())
-        ### start ingesting
-        tenable(data)
+            sc = TenableSC(tenableObj.server, access_key=tenableObj.access_key, secret_key=tenableObj.secret_key)
+            for sev in ask_severities:
+                for vuln in sc.analysis.vulns(filters=[('severity', '=', '%s' % sev),]):
+                    # start ingesting
+                    tenable(vuln)
