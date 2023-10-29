@@ -7,6 +7,8 @@ from vamp_scans.models import Tag
 from vamp_api.models import TenableAPI
 
 class ConfigureTenableAPIForm(ModelForm):
+    severities = forms.CharField(required=False)
+
     class Meta:
         model = TenableAPI
         fields = ['server', 'access_key', 'secret_key', 'severities']

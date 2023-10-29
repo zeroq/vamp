@@ -233,6 +233,7 @@ class Command(BaseCommand):
                 except Exception as error:
                     print(error)
                     continue
+            # if no match -> set to all except informational
             if len(ask_severities)==0:
                 ask_severities = [4,3,2,1]
             # connect to Tenable API

@@ -37,6 +37,9 @@ def configure_tenable_api(request):
         form = ConfigureTenableAPIForm(request.POST)
         if form.is_valid():
             apiobj = form.save()
+            if apiobj.severities == '':
+                apiobj.severities = 'all'
+                apiobj.save()
             messages.info(request, 'Entry created successfull!')
         else:
             messages.error(request, format_html('Entry creation failed! %s' % form.errors))
