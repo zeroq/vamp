@@ -65,6 +65,12 @@
                 },
                 {'data': 'status', 'sName': 'Status', 'aTargets': [ 1 ],
                 },
+                {'data': 'ops', 'sName': 'Operations', 'aTargets': [ 4 ],
+                    "mRender": function (data, type, full) {
+                        var unpatch_url = "{% url 'findings:change_finding_for_host' findingid=finding.id status='open' %}";
+                        return '<a href="'+unpatch_url+'"><span class="glyphicon glyphicon-remove"></span></a>';
+                    },
+                },
             ]
         });
         // DISPLAY COMMENTS
@@ -154,6 +160,7 @@
             <thead>
                 <th>Hostname</th>
                 <th>Status</th>
+                <th>Ops</th>
             </thead>
         </table>
     </div>

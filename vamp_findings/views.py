@@ -12,8 +12,49 @@ from vamp_exceptions.models import Exceptions
 # Create your views here.
 
 @login_required
+def change_finding_for_host(request, findingid, status):
+    """change the status of the finding for given host
+    """
+    context = {}
+    # get finding object
+    try:
+        obj = Finding.objects.get(id=findingid)
+    except Finding.DoesNotExist:
+        messages.error(request, 'Finding not found!')
+        return render(request, 'vamp_findings/list_findings.html', context)
+    # prepare comment
+    comment = {
+        'author': request.user,
+        'ctext': ''
+    }
+    changed = False
+    if status == 'open':
+        obj.status = 0
+        obj.date_remediated = None
+        obj.save()
+        messages.info(request, 'Finding changed to "%s" for host %s!' % (status, obj.host.name))
+        changed = True
+    else:
+        messages.error(request, 'Unknown Finding status: %s' % status)
+        changed = False
+    if changed is True:
+        # create finding comment
+        comment['finding'] = obj
+        comment['ctext'] = 'changed status to: %s (%s)' % (status, obj.host.name)
+        c = Comment(**comment)
+        c.save()
+        # create host comment
+        del comment['finding']
+        comment['host'] = obj.host
+        c = HostComment(**comment)
+        c.save()
+    return redirect(reverse('findings:view_finding', kwargs={'findingid': findingid}))
+
+
+
+@login_required
 def change_finding_affected_hosts(request, findingid, status):
-    """close the finding for all affected hosts
+    """change the status of the finding for all affected hosts
     """
     context = {}
     try:
@@ -26,11 +67,11 @@ def change_finding_affected_hosts(request, findingid, status):
     except Exception as error:
         messages.error(request, 'Finding not found! (%s)' % error)
         return render(request, 'vamp_findings/list_findings.html', context)
-    # prepare comment
-    comment = {
-        'author': request.user,
-        'ctext': ''
-    }
+    # prepare comment TODO: remove not used
+    #comment = {
+    #    'author': request.user,
+    #    'ctext': ''
+    #}
     # remove exception entries that were created for all at once
     for entry in objs:
         Exceptions.objects.filter(finding=entry, approved=True, reason='Grant all exception').delete()
